@@ -25,12 +25,6 @@ class _ProductOverviewScreenState extends State<ProductOverviewScreen> {
   var _isInit = true;
 
   @override
-  void initState() {
-    //Provider.of<Products>(context).fetchAndSetProducts();
-    super.initState();
-  }
-
-  @override
   void didChangeDependencies() {
     if (_isInit) {
       setState(() {

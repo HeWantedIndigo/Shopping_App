@@ -6,13 +6,25 @@ import '../providers/product.dart';
 import '../models/http_exception.dart';
 
 class Products with ChangeNotifier {
+
+  final String authToken;
+  final String userId;
   List<Product> _items = [];
 
-  Future<void> fetchAndSetProducts() async {
-    const url = 'https://shopping-app-3e0d8.firebaseio.com/products.json';
+  Products(this.authToken, this.userId, this._items);
+
+
+  Future<void> fetchAndSetProducts([bool filterByUser = false]) async {
+    String url;
+    if (filterByUser)
+      url = 'https://shopping-app-3e0d8.firebaseio.com/products.json?auth=$authToken&orderBy="createrId"&equalTo="$userId"';
+    else
+      url = 'https://shopping-app-3e0d8.firebaseio.com/products.json?auth=$authToken';
     try {
       final response = await http.get(url);
       final extractedData = json.decode(response.body) as Map<String,dynamic>;
+      final favoritesResponse = await http.get('https://shopping-app-3e0d8.firebaseio.com/favorites/$userId.json?auth=$authToken');
+      final favoritesData = json.decode(favoritesResponse.body);
       final List<Product> loadedProducts = [];
       extractedData.forEach((prodID, prodData) {
         loadedProducts.add(Product(
@@ -21,7 +33,7 @@ class Products with ChangeNotifier {
           description: prodData['description'],
           price: prodData['price'],
           imageUrl: prodData['imageUrl'],
-          isFavorite: prodData['isFavorite'],
+          isFavorite: favoritesData == null ? false: favoritesData[prodID] ?? false,
         ));
         _items = loadedProducts;
         notifyListeners();
@@ -32,14 +44,15 @@ class Products with ChangeNotifier {
   }
 
   Future<void> addProduct(Product newProduct) async {
-    const url = 'https://shopping-app-3e0d8.firebaseio.com/products.json';
+    final url = 'https://shopping-app-3e0d8.firebaseio.com/products.json?auth=$authToken';
     try {
       final response = await http.post(url, body: json.encode({
         'title': newProduct.title,
         'description': newProduct.description,
         'imageUrl': newProduct.imageUrl,
         'price': newProduct.price,
-        'isFavorite': newProduct.isFavorite
+        'isFavorite': newProduct.isFavorite,
+        'createrId' : userId,
       }));
       newProduct = Product(
       id: json.decode(response.body)['name'],
@@ -62,7 +75,7 @@ class Products with ChangeNotifier {
   Future<void> updateProduct(String id, Product product) async {
     final index = _items.indexWhere((prod) => prod.id == id);
     if (index >= 0) {
-      final url = 'https://shopping-app-3e0d8.firebaseio.com/products/$id.json';
+      final url = 'https://shopping-app-3e0d8.firebaseio.com/products/$id.json?auth=$authToken';
       //Should implement exception handling
       await http.patch(url, body: json.encode({
         'title' : product.title,
@@ -78,7 +91,7 @@ class Products with ChangeNotifier {
   }
 
   Future<void> deleteProduct(String id) async {
-    final url = 'https://shopping-app-3e0d8.firebaseio.com/products/$id.json';
+    final url = 'https://shopping-app-3e0d8.firebaseio.com/products/$id.json?auth=$authToken';
     final existingProductIndex = _items.indexWhere((prod) => prod.id == id);
     var existingProduct = _items[existingProductIndex];
     _items.removeAt(existingProductIndex);

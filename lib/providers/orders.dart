@@ -22,36 +22,42 @@ class Order {
 
 class Orders with ChangeNotifier {
 
+  final String authToken;
+  final String userId;
   List<Order> _orders = [];
+
+  Orders(this.authToken, this.userId, this._orders);
 
   List<Order> get orders {
     return [..._orders];
   }
 
   Future<void> fetchAndSetOrders() async {
-    const url = 'https://shopping-app-3e0d8.firebaseio.com/orders.json';
+    final url = 'https://shopping-app-3e0d8.firebaseio.com/orders/$userId.json?auth=$authToken';
     try {
       final response = await http.get(url);
       final extractedData = json.decode(response.body) as Map<String,dynamic>;
       final List<Order> loadedOrders = [];
-      extractedData.forEach((orderID, orderData) {
-        loadedOrders.add(Order(
-          id: orderID,
-          amount: orderData['amount'],
-          dateTime: DateTime.parse(orderData['dateTime']),
-          products: (orderData['products'] as List<dynamic>)
-          .map(
-            (item) => CartItem(
-              id: item['id'],
-              price: item['price'],
-              quantity: item['quantity'],
-              title: item['title'],
-            )
-          ).toList(),
-        ));
-        _orders = loadedOrders;
+      if (extractedData != null) {
+        extractedData.forEach((orderID, orderData) {
+          loadedOrders.add(Order(
+            id: orderID,
+            amount: orderData['amount'],
+            dateTime: DateTime.parse(orderData['dateTime']),
+            products: (orderData['products'] as List<dynamic>)
+            .map(
+              (item) => CartItem(
+                id: item['id'],
+                price: item['price'],
+                quantity: item['quantity'],
+                title: item['title'],
+              )
+            ).toList(),
+          ));
+          _orders = loadedOrders;
+        });
         notifyListeners();
-      });
+      }
     } catch (error) {
       throw error;
     }
@@ -60,7 +66,7 @@ class Orders with ChangeNotifier {
 
   Future<void> addOrder(List<CartItem> cartProducts, double total) async {
     final timeStamp = DateTime.now();
-    const url = 'https://shopping-app-3e0d8.firebaseio.com/orders.json';
+    final url = 'https://shopping-app-3e0d8.firebaseio.com/orders/$userId.json?auth=$authToken';
     //Can attempt try catch
     final response = await http.post(url, body: json.encode({
       'amount' : total,

@@ -11,13 +11,11 @@ class UserProductsScreen extends StatelessWidget {
   static const routeName = '/user_products_screen';
 
   Future<void> _refreshProducts(BuildContext context) async {
-    Provider.of<Products>(context).fetchAndSetProducts();
+    await Provider.of<Products>(context, listen: false).fetchAndSetProducts(true);
   }
 
   @override
   Widget build(BuildContext context) {
-
-    final productsData = Provider.of<Products>(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -35,21 +33,26 @@ class UserProductsScreen extends StatelessWidget {
         ],
       ),
       drawer: AppDrawer(),
-      body: RefreshIndicator(
-        onRefresh: () => _refreshProducts(context),
-        child: Container(
-          padding: EdgeInsets.all(10),
-          child: ListView.builder(
-            itemCount: productsData.items.length,
-            itemBuilder: (ctx, index) => Column(
-              children: <Widget>[
-                UserProductItem(
-                  productsData.items[index].id, 
-                  productsData.items[index].title, 
-                  productsData.items[index].imageUrl
+      body: FutureBuilder(
+        future: _refreshProducts(context),
+        builder: (ctx, snapshot) => snapshot.connectionState == ConnectionState.waiting ? Center(child: CircularProgressIndicator()) : RefreshIndicator(
+          onRefresh: () => _refreshProducts(ctx),
+          child: Consumer<Products>(
+            builder: (ctx, productsData, _) => Container(
+              padding: EdgeInsets.all(10),
+              child: ListView.builder(
+                itemCount: productsData.items.length,
+                itemBuilder: (ctx, index) => Column(
+                  children: <Widget>[
+                    UserProductItem(
+                      productsData.items[index].id, 
+                      productsData.items[index].title, 
+                      productsData.items[index].imageUrl
+                    ),
+                    Divider(),
+                  ],
                 ),
-                Divider(),
-              ],
+              ),
             ),
           ),
         ),
